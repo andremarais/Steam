@@ -11,6 +11,12 @@ client = MongoClient("localhost", 27017)
 coll_players = client.steam.players
 
 players = coll_players.find().limit(1)
+
+# for offline building etc
+with open('test.json', 'w') as outfile:
+    json.dump(players[0], outfile)
+
+
 #
 # for p in players:
 #     player_id = p['_id']
@@ -25,15 +31,15 @@ players = coll_players.find().limit(1)
 #
 # print "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(320) + "&key="+ steam_key +"&steamid=" + str(76561197998281789)
 
-a = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(220) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
-
-
-# response = urllib2.urlopen(a)
+# a = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(220) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
 #
-# results = requests.get("http://www.bing.com/search",
-#               params={'q': query, 'first': page},
-#               headers={'User-Agent': user_agent})
-
-# b = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(320) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
-print a.json()
-
+#
+# # response = urllib2.urlopen(a)
+# #
+# # results = requests.get("http://www.bing.com/search",
+# #               params={'q': query, 'first': page},
+# #               headers={'User-Agent': user_agent})
+#
+# # b = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(320) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
+# print a.json()
+#
