@@ -1,45 +1,60 @@
-import urllib2
+import time
 import json
 from pymongo import *
 from pprint import pprint
-import urllib, urllib2
+
 import requests
 
-steam_key = 'C100AD140B625C873DAB3CB5A5B076A8'
+from decimal import *
 
+
+steam_key = 'C100AD140B625C873DAB3CB5A5B076A8'
 client = MongoClient("localhost", 27017)
 coll_players = client.steam.players
 
-players = coll_players.find().limit(1)
+# Selects player with open profiles, with at least one game
+player_sample = coll_players.find({'visibility': 3,
+                                   'achievements': {'$exists': False},
+                                   'games': {'$gt': {}}})
 
-# for offline building etc
-with open('test.json', 'w') as outfile:
-    json.dump(players[0], outfile)
 
+# Goes through the profiles and look for achievements to upload
+def upload_achievements(players, db, steamkey):
+    # Errors, always errors that is due to connection issues or whatnot. While True allows for 60 seconds before retry
+    while True:
+        try:
+            i = 1
+            for p in players:
+                # So that the variables can be used in further functions (if statements etc)
+                global player_id
+                player_id = p['_id']
+                global player_achievements # ^^
+                player_achievements = []
+                j = 1
+                print str(len(p['games'])) + ' games owned'
+                played_games = []
+                # Excluding games with 0 play time - almost every player has games he hasn't played
+                for q in p['games']:
+                    if q['playtime_forever'] > 0:
+                        played_games.append(q)
+                print str(played_games.__len__()) + ' games played'
+                print player_id
+                # And now to download achievements
+                for games in played_games:
+                    achievements = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(games["appid"]) + "&key="+ steam_key +"&steamid=" + str(player_id)).json()
+                    if 'achievements' in achievements['playerstats']:
+                        player_achievements.append([str(games["appid"]), achievements['playerstats']['achievements']])
 
-#
-# for p in players:
-#     player_id = p['_id']
-#     for games in p['games']:
-#         print games['appid']
-#         print player_id
-#         achievements = urllib2.urlopen("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(games["appid"]) + "&key="+ steam_key +"&steamid=" + str(player_id)).read()
-#         # print achievements
-#         pass
-#     # print "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + games["appid"] + "&key="+ steam_key +"&steamid=" + player_id
-#
-#
-# print "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(320) + "&key="+ steam_key +"&steamid=" + str(76561197998281789)
+                        db.update({'_id': player_id},
+                                  {'achievements': player_achievements}, upsert=True)
 
-# a = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(220) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
-#
-#
-# # response = urllib2.urlopen(a)
-# #
-# # results = requests.get("http://www.bing.com/search",
-# #               params={'q': query, 'first': page},
-# #               headers={'User-Agent': user_agent})
-#
-# # b = requests.get("http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid=" + str(320) + "&key="+ steam_key +"&steamid=" + str(76561197998281789))
-# print a.json()
-#
+            i = + 1
+            if i % 10 == 0:
+                print str(Decimal(i) / Decimal(player_sample.count())) * 100 + '%'
+
+        except ValueError:
+            print 'error, waiting 60 seconds'
+            time.sleep(60)
+    pass
+
+upload_achievements(player_sample, coll_players, steam_key)
